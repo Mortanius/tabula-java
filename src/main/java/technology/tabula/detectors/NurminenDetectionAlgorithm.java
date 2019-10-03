@@ -171,25 +171,27 @@ public class NurminenDetectionAlgorithm implements DetectionAlgorithm {
         // next find any vertical rulings that intersect tables - sometimes these won't have completely been captured as
         // cells if there are missing horizontal lines (which there often are)
         // let's assume though that these lines should be part of the table
-        for (Line2D.Float verticalRuling : verticalRulings) {
-            for (Rectangle tableArea : tableAreas) {
-                if (verticalRuling.intersects(tableArea) &&
-                        !(tableArea.contains(verticalRuling.getP1()) && tableArea.contains(verticalRuling.getP2()))) {
-
-                    tableArea.setTop((float) Math.floor(Math.min(tableArea.getTop(), verticalRuling.getY1())));
-                    tableArea.setBottom((float) Math.ceil(Math.max(tableArea.getBottom(), verticalRuling.getY2())));
-                    break;
-                }
-            }
-        }
-
-        // the tabula Page coordinate space is half the size of the PDFBox image coordinate space
-        // so halve the table area size before proceeding and add a bit of padding to make sure we capture everything
-        for (Rectangle area : tableAreas) {
-            area.x = (float) Math.floor(area.x / 2) - TABLE_PADDING_AMOUNT;
-            area.y = (float) Math.floor(area.y / 2) - TABLE_PADDING_AMOUNT;
-            area.width = (float) Math.ceil(area.width / 2) + TABLE_PADDING_AMOUNT;
-            area.height = (float) Math.ceil(area.height / 2) + TABLE_PADDING_AMOUNT;
+        if (!tableAreas.isEmpty()) {
+	        for (Line2D.Float verticalRuling : verticalRulings) {
+	            for (Rectangle tableArea : tableAreas) {
+	                if (verticalRuling.intersects(tableArea) &&
+	                        !(tableArea.contains(verticalRuling.getP1()) && tableArea.contains(verticalRuling.getP2()))) {
+	
+	                    tableArea.setTop((float) Math.floor(Math.min(tableArea.getTop(), verticalRuling.getY1())));
+	                    tableArea.setBottom((float) Math.ceil(Math.max(tableArea.getBottom(), verticalRuling.getY2())));
+	                    break;
+	                }
+	            }
+	        }
+	
+	        // the tabula Page coordinate space is half the size of the PDFBox image coordinate space
+	        // so halve the table area size before proceeding and add a bit of padding to make sure we capture everything
+	        for (Rectangle area : tableAreas) {
+	            area.x = (float) Math.floor(area.x / 2) - TABLE_PADDING_AMOUNT;
+	            area.y = (float) Math.floor(area.y / 2) - TABLE_PADDING_AMOUNT;
+	            area.width = (float) Math.ceil(area.width / 2) + TABLE_PADDING_AMOUNT;
+	            area.height = (float) Math.ceil(area.height / 2) + TABLE_PADDING_AMOUNT;
+	        }
         }
 
         // we're going to want halved horizontal lines later too
@@ -205,30 +207,32 @@ public class NurminenDetectionAlgorithm implements DetectionAlgorithm {
         List<Line> lines = TextChunk.groupByLines(textChunks);
 
         // first look for text rows that intersect an existing table - those lines should probably be part of the table
-        for (Line textRow : lines) {
-            for (Rectangle tableArea : tableAreas) {
-                if (!tableArea.contains(textRow) && textRow.intersects(tableArea)) {
-                    tableArea.setLeft((float) Math.floor(Math.min(textRow.getLeft(), tableArea.getLeft())));
-                    tableArea.setRight((float) Math.ceil(Math.max(textRow.getRight(), tableArea.getRight())));
-                }
-            }
-        }
-
-        // get rid of tables that DO NOT intersect any text areas - these are likely graphs or some sort of graphic
-        for (Iterator<Rectangle> iterator = tableAreas.iterator(); iterator.hasNext(); ) {
-            Rectangle table = iterator.next();
-
-            boolean intersectsText = false;
-            for (Line textRow : lines) {
-                if (table.intersects(textRow)) {
-                    intersectsText = true;
-                    break;
-                }
-            }
-
-            if (!intersectsText) {
-                iterator.remove();
-            }
+        if (!tableAreas.isEmpty()) {
+	        for (Line textRow : lines) {
+	            for (Rectangle tableArea : tableAreas) {
+	                if (!tableArea.contains(textRow) && textRow.intersects(tableArea)) {
+	                    tableArea.setLeft((float) Math.floor(Math.min(textRow.getLeft(), tableArea.getLeft())));
+	                    tableArea.setRight((float) Math.ceil(Math.max(textRow.getRight(), tableArea.getRight())));
+	                }
+	            }
+	        }
+	
+	        // get rid of tables that DO NOT intersect any text areas - these are likely graphs or some sort of graphic
+	        for (Iterator<Rectangle> iterator = tableAreas.iterator(); iterator.hasNext(); ) {
+	            Rectangle table = iterator.next();
+	
+	            boolean intersectsText = false;
+	            for (Line textRow : lines) {
+	                if (table.intersects(textRow)) {
+	                    intersectsText = true;
+	                    break;
+	                }
+	            }
+	
+	            if (!intersectsText) {
+	                iterator.remove();
+	            }
+	        }
         }
 
         // lastly, there may be some tables that don't have any vertical rulings at all
@@ -245,14 +249,16 @@ public class NurminenDetectionAlgorithm implements DetectionAlgorithm {
             foundTable = false;
 
             // get rid of any text lines contained within existing tables, this allows us to find more tables
-            for (Iterator<Line> iterator = lines.iterator(); iterator.hasNext(); ) {
-                Line textRow = iterator.next();
-                for (Rectangle table : tableAreas) {
-                    if (table.contains(textRow)) {
-                        iterator.remove();
-                        break;
-                    }
-                }
+            if (!tableAreas.isEmpty()) {
+	            for (Iterator<Line> iterator = lines.iterator(); iterator.hasNext(); ) {
+	                Line textRow = iterator.next();
+	                for (Rectangle table : tableAreas) {
+	                    if (table.contains(textRow)) {
+	                        iterator.remove();
+	                        break;
+	                    }
+	                }
+	            }
             }
 
             // get text edges from remaining lines in the document
